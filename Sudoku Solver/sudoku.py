@@ -1,5 +1,10 @@
 from itertools import combinations
 
+class InvalidPuzzleException(Exception):
+    pass
+
+class NoSolutionException(Exception):
+    pass
 
 possible_values = frozenset(range(1, 10))
 
@@ -117,8 +122,6 @@ class Domain:
                         cell.substitute_candidates(new_candidates)
                         changed = True
         return changed
-        
-    
 
     def __str__(self):
         return ' '.join(str(cell) for cell in self.cells)
@@ -238,7 +241,19 @@ class Square(Domain):
         
 
 class Sudoku:
-    def __init__(self, input_ : list[list[int]]):
+    def validate_grid(self, input_: list[list[int]]):
+        if len(input_) != 9:
+            raise ValueError("Input grid must have 9 rows")
+        for row in input_:
+            if len(row) != 9:
+                raise ValueError("Input grid must have 9 columns")
+            for value in row:
+                if not isinstance(value, int) or not (0 <= value <= 9):
+                    raise ValueError("Grid values must be integers between 0 and 9 inclusive")
+
+    def __init__(self, input_ : list[list[int]], validate: bool = False):
+        if validate:
+            self.validate_grid(input_)
         self.grid: list[list[Cell]] = []
         self.domains: set[Domain] = set()
         self.lines: set[Line] = set()
@@ -280,13 +295,25 @@ class Sudoku:
             for j in range(len(self.grid[i])):
                 if input_[i][j] != 0:
                     self.grid[i][j].assign_value(input_[i][j])
+        if validate and not self.is_valid_solution():
+            raise InvalidPuzzleException("Initial grid is invalid, violates Sudoku rules")
 
                         
     
     def is_solved(self) -> bool:
         return all(cell.is_solved() for row in self.grid for cell in row)
 
-    def is_valid(self) -> bool:
+    def is_valid_candidate(self) -> bool:
+        for row in self.grid:
+            for cell in row:
+                if not cell.is_solved() and len(cell.candidates) == 0:
+                    return False
+
+        return True
+    
+    def is_valid_solution(self) -> bool:
+        if not self.is_valid_candidate():
+            return False
         for domain in self.domains:
             seen_values = set()
             for cell in domain.cells:
@@ -396,21 +423,38 @@ class Sudoku:
             changed = changed or self.solve_kfish(k)
         return changed
 
+    def smallest_candidate_cell_index(self) -> tuple[int, int] | None:
+        lowest = 10
+        for row in range(len(self.grid)):
+            for col in range(len(self.grid[row])):
+                cell = self.grid[row][col]
+                if not cell.is_solved() and len(cell.candidates) < lowest:
+                    if len(cell.candidates) == 2:
+                        return (row, col)
+                    lowest = len(cell.candidates)
+                    smallest = (row, col)
+        return smallest
+
+
     def solve(self):
         while not self.is_solved():
             changed = False
             changed = self.strategy_until_change()
             if changed == False:
-
-                raise Exception("No solution found")
+                raise NoSolutionException("No solution found with implemented strategies")
+            elif not self.is_valid_candidate():
+                raise InvalidPuzzleException("Puzzle is invalid, no candidates left for some cell")
             self.solve_trivial()
-
-        sol_rows = []
-        for row in self.grid:
-            sol_rows.append([cell.value for cell in row])
-        return sol_rows
         
-
+    def output(self) -> list[list[int]]:
+        return [[cell.value for cell in row] for row in self.grid]
+    
+    def copy(self) -> 'Sudoku':
+        s = Sudoku(self.output())
+        for row in range(len(self.grid)):
+            for cell in range(len(self.grid[row])):
+                s.grid[row][cell].candidates = self.grid[row][cell].candidates.copy()
+        return s
                     
     def __str__(self) :
         st = ''
@@ -429,6 +473,34 @@ class Sudoku:
     def __repr__(self):
         return '\n'.join(''.join(str(cell) for cell in row) for row in self.grid)
         
+
+
+def sudoku_solver(input_) -> list[list[int]]:
+    #dfs
+
+    s = Sudoku(input_, validate=True)
+    stack = [s]
+    while stack:
+        s = stack.pop()
+        try:
+            s.solve()
+            output = s.output()
+            return output
+        except NoSolutionException:
+            cell_index = s.smallest_candidate_cell_index()
+            if cell_index is None:
+                continue
+            row, col = cell_index
+            cell = s.grid[row][col]
+            for candidate in cell.candidates:
+                s_copy = s.copy()
+                s_copy.grid[row][col].assign_value(candidate)
+                stack.append(s_copy)
+        except InvalidPuzzleException:
+            continue
+    raise NoSolutionException("No solution found for the given puzzle")
+    
+
 
 sudoku1 = [
     [4, 0, 0, 0, 0, 0, 3, 0, 6],
@@ -479,6 +551,22 @@ sudoku4 = [
 ]
 
 
-s = Sudoku(sudoku2)
 
-print(s.solve())
+
+very_hard = [
+    [8, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 3, 6, 0, 0, 0, 0, 0],
+    [0, 7, 0, 0, 9, 0, 2, 0, 0],
+    [0, 5, 0, 0, 0, 7, 0, 0 ,0],
+    [0 ,0 ,0 ,0 ,4 ,5 ,7 ,0 ,0],
+    [0 ,0 ,0 ,1 ,0 ,0 ,0 ,3 ,0],
+    [0 ,0 ,1 ,0 ,0 ,0 ,0 ,6 ,8],
+    [0 ,0 ,8 ,5 ,0 ,0 ,0 ,1 ,0],
+    [0 ,9 ,0 ,0 ,0 ,0 ,4 ,0 ,0]
+]
+
+
+
+
+
+
