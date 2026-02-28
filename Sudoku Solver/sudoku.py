@@ -473,19 +473,13 @@ class Sudoku:
     def __repr__(self):
         return '\n'.join(''.join(str(cell) for cell in row) for row in self.grid)
         
-
-
-def sudoku_solver(input_) -> list[list[int]]:
-    #dfs
-
-    s = Sudoku(input_, validate=True)
+def solve_obj(s: Sudoku) -> Sudoku:
     stack = [s]
     while stack:
         s = stack.pop()
         try:
             s.solve()
-            output = s.output()
-            return output
+            return s
         except NoSolutionException:
             cell_index = s.smallest_candidate_cell_index()
             if cell_index is None:
@@ -499,9 +493,13 @@ def sudoku_solver(input_) -> list[list[int]]:
         except InvalidPuzzleException:
             continue
     raise NoSolutionException("No solution found for the given puzzle")
+
+def sudoku_solver(input_) -> list[list[int]]:
+    s = Sudoku(input_, validate=True)
+    return solve_obj(s).output()
+
+
     
-
-
 sudoku1 = [
     [4, 0, 0, 0, 0, 0, 3, 0, 6],
     [0, 0, 0, 0, 9, 0, 4, 0, 0],
@@ -565,6 +563,10 @@ very_hard = [
     [0 ,9 ,0 ,0 ,0 ,0 ,4 ,0 ,0]
 ]
 
+s = Sudoku(very_hard)
+print(solve_obj(s))
+
+print(sudoku_solver(very_hard))
 
 
 
