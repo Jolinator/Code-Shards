@@ -43,5 +43,6 @@ temp.py
 .vscode/
 .venv/
 __pycache__/
-
+**.lock
+target/
 

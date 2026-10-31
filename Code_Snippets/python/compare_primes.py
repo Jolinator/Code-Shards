@@ -1,6 +1,8 @@
+
+
 from prime_sqrt import prime, naive_prime_until
 from Sieve_Prime_List import primes_until_n
-import timeit
+import time
 class SieveListTestCase:
     def __init__(self, n, start, exp):
         self.n = n
@@ -14,21 +16,33 @@ class SieveListTestCase:
 class VsCase:
     def __init__(self, n):
         self.n = n
-        self.primes = [2,3]
+        self.naive_primes = [2,3]
+        self.list_primes = None
         self.naive_time = None
         self.list_time = None
 
     def run_naive(self):
         if not self.naive_time:
-            self.naive_time = timeit.timeit(f"naive_prime_until({self.n}, {self.primes})", globals=globals(), number=1)
+            start_time = time.time()
+            self.naive_primes = naive_prime_until(self.n, self.naive_primes)
+            self.naive_time = time.time() - start_time
+
 
     def run_list(self):
         if not self.list_time:
-            self.list_time = timeit.timeit(f"primes_until_n({self.n})", globals=globals(), number=1)
+            start_time = time.time()
+            self.list_primes = primes_until_n(self.n)
+            self.list_time = time.time() - start_time
+            
 
     def run_all(self):
         self.run_naive()
         self.run_list()
+
+    def compare_results(self):
+        if len(self.naive_primes) == len(self.list_primes) + 1:
+            return self.naive_primes[:-1] == self.list_primes
+        return self.naive_primes == self.list_primes
 
 def find_best_params_sieve_list():
     cases: list[SieveListTestCase] = []
@@ -62,6 +76,12 @@ def naive_prime_vs_list_sieve():
     for n in n_values:
         case = VsCase(n)
         case.run_all()
-        print(f"n={n}, naive_time={case.naive_time}, list_time={case.list_time}")
+        print(f"n={n}, naive_time={case.naive_time}, list_time={case.list_time}, results_match={case.compare_results()}")
+        if not case.compare_results():
+            print(f"Mismatch found for n={n}")
+            print(f"Naive primes: {case.naive_primes}")
+            print(f"List primes: {case.list_primes}")
+            break
+    
 
 naive_prime_vs_list_sieve()

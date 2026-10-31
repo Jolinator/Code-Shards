@@ -12,17 +12,17 @@
 primes = [2,3]
 
 
-def next_prime(primes):
+def next_prime(primes_l):
     found_prime = False
-    itr = primes[-1] + 2
+    itr = primes_l[-1] + 2
     
     while not found_prime:
 
     
-        for x in primes:
+        for x in primes_l:
             if x*x > itr:
                 found_prime = True
-                primes.append(itr)
+                primes_l.append(itr)
 
                 break
             if itr % x == 0:
@@ -30,21 +30,21 @@ def next_prime(primes):
         itr += 2
 
 
-def naive_prime_until(n,primes):
-    while primes[-1] < n:
-        next_prime(primes)
-    return primes
+def naive_prime_until(n,primes_l):
+    while primes_l[-1] < n:
+        next_prime(primes_l)
+    return primes_l
 
 
 
-def prime(n, primes):
+def prime(n, primes_l):
 
-    latest = primes[-1]
+    latest = primes_l[-1]
     while latest * latest <= n:
-        next_prime(primes)
-        latest = primes[-1]
+        next_prime(primes_l)
+        latest = primes_l[-1]
 
-    for x in primes:
+    for x in primes_l:
         if x*x > n:
             break
         if n % x == 0:
