@@ -12,7 +12,7 @@
 primes = [2,3]
 
 
-def next_prime():
+def next_prime(primes):
     found_prime = False
     itr = primes[-1] + 2
     
@@ -30,12 +30,18 @@ def next_prime():
         itr += 2
 
 
+def naive_prime_until(n,primes):
+    while primes[-1] < n:
+        next_prime(primes)
+    return primes
 
-def prime(n):
+
+
+def prime(n, primes):
 
     latest = primes[-1]
     while latest * latest <= n:
-        next_prime()
+        next_prime(primes)
         latest = primes[-1]
 
     for x in primes:
@@ -48,6 +54,7 @@ def prime(n):
 
     return True
 
-import timeit
-print(timeit.timeit("prime(99999999999)", globals=globals(), number=1))
-print(timeit.timeit("prime(99999999997)", globals=globals(), number=1))
+if __name__ == "__main__":
+    import timeit
+    print(timeit.timeit("prime(99999999999,primes)", globals=globals(), number=1))
+    print(timeit.timeit("prime(99999999997,primes)", globals=globals(), number=1))
