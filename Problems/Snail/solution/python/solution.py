@@ -1,0 +1,2 @@
+def snail(snail_map):
+    return snail_map[0] + [x[-1] for x in snail_map[1:-1]] + snail_map[-1][::-1] + [x[0] for x in snail_map[1:-1]][::-1] + snail([x[1:-1] for x in snail_map[1:-1]]) if len(snail_map) > 1 else snail_map[0] if len(snail_map) == 1 else []
