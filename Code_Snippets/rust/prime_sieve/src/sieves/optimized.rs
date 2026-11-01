@@ -16,7 +16,6 @@ pub(super) fn get_primes_from_bits(
     nums: &[u64],
 ) -> Vec<usize> {
     let mut primes = Vec::new();
-    // limit is exclusive; start_odd is odd, so this is the number of odds in [start_odd, limit)
     let bit_limit = limit.saturating_sub(start_odd).div_ceil(2);
     let u64_limit = bit_limit.div_ceil(64);
 
