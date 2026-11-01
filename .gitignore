@@ -45,4 +45,5 @@ temp.py
 __pycache__/
 **.lock
 target/
+.env
 

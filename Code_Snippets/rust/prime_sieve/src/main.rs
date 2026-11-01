@@ -1,100 +1,62 @@
-use std::{println, time::{Duration, Instant}, vec};
+mod sieves;
+mod time_tests;
 
+use std::{collections::HashMap, env};
 
-fn eratosthenes_naive(limit: usize) -> Vec<usize> {
-    let mut primes = Vec::new();
-    let mut nums = vec![true; limit];
-    nums[0] = false;
-    nums[1] = false;
-    let mut counter = 4;
-    let mut invalidating = 2;
-    while invalidating <= (limit as f64).sqrt() as usize {
-        while counter < nums.len(){
-            nums[counter] = false;
-            counter+=invalidating;
-        }
-        invalidating+=1;
-        while !nums[invalidating]{
-            invalidating+=1;
-        }
-        counter=invalidating*2
-    }
-    for n in 0..nums.len()-1{
-        if nums[n]{
-            primes.push(n);
-        }
-    }
-    primes
-}
+use sieves::{
+    cache_thread::eratosthenes_cache_thread,
+    naive::eratosthenes_naive,
+    optimized::eratosthenes_algo_optimized,
+};
+use time_tests::{time_function, time_thread_cache};
 
-fn is_set(bits: &[u64], n: usize) -> bool {
-    let mask = 1u64 << (n % 64);
-    bits[n / 64] & mask != 0
-}
-
-fn clear_bit(bits: &mut [u64], n: usize) {
-    let mask = 1u64 << (n % 64);
-    bits[n / 64] &= !mask;
-}
-
-fn eratosthenes_algo_optimized(limit: usize) -> Vec<usize> {
-    let mut primes = vec![2];
-    let odd_count = limit.saturating_sub(2) / 2;
-    let mut nums = vec![u64::MAX; odd_count.div_ceil(64)];
-    let mut counter = 9;
-    let mut invalidating = 3;
-    while invalidating <= (limit as f64).sqrt() as usize {
-        while counter < limit {
-            clear_bit(&mut nums, (counter-3)/2);
-            counter+=invalidating*2;
-        }
-        invalidating+=2;
-        while !is_set(&nums, (invalidating-3)/2){
-            invalidating+=2;
-        }
-        counter=invalidating*invalidating;
-    }
-    for n in 0..odd_count{
-        if is_set(&nums, n){
-            primes.push(2 * n + 3);
-        }
-    }
-    primes
-}
-
-struct TestResult{
-    limit:usize,
-    time:Duration,
-    primes:Vec<usize>
-}
-
-fn time_test(func: fn(usize) -> Vec<usize>, limit:usize) -> TestResult{
-    let start = Instant::now();
-    let primes = func(limit);
-    let duration = start.elapsed();
-    TestResult { limit, time: duration, primes }
-}
-
-fn time_function(func: fn(usize) -> Vec<usize>) -> Vec<TestResult>{
-    let values = vec![100,1000,10000,1000000,10000000,100000000];
-    let mut results = Vec::new();
-    for limit in values {
-        results.push(time_test(func, limit));
-    }
-    results
-}
+static ENV_VAR_NAMES: &[&str] = &[
+    "CPU_L1D_CACHE_SIZE_PER_INSTANCE_KB",
+    "CPU_LOGICAL_CORES",
+];
 
 fn main() {
+    dotenvy::dotenv().ok();
+
+    let env_var_values: HashMap<String, usize> = ENV_VAR_NAMES
+        .iter()
+        .map(|&var_name| {
+            let value = env::var(var_name)
+                .expect(&format!("{} must be set", var_name))
+                .parse::<usize>()
+                .expect(&format!("{} must be a valid usize", var_name));
+            (var_name.to_string(), value)
+        })
+        .collect();
+    let cache_bytes = *env_var_values
+        .get("CPU_L1D_CACHE_SIZE_PER_INSTANCE_KB")
+        .unwrap_or(&32)
+        * 1024;
+    let logical_threads = *env_var_values
+        .get("CPU_LOGICAL_CORES")
+        .unwrap_or(&1);
+
     let results_naive = time_function(eratosthenes_naive);
     let results_optimized = time_function(eratosthenes_algo_optimized);
+    let results_cache_thread = time_thread_cache(eratosthenes_cache_thread, cache_bytes, logical_threads);
 
+    for (index, (naive, optimized)) in results_naive
+        .iter()
+        .zip(&results_optimized)
+        .enumerate()
+    {
+        let mut same_primes = naive.primes == optimized.primes;
+        println!("Limit: {}, Same primes: {}", naive.limit, same_primes);
+        println!("Naive Sieve time: {:?}", naive.time);
+        println!("Optimized Sieve time: {:?}", optimized.time);
 
-    for (r1, r2) in results_naive.iter().zip(&results_optimized) {
-        let same_primes = r1.primes == r2.primes;
-        println!("Limit: {}, Same primes: {}", r1.limit, same_primes);
-        println!("Naive Sieve time: {:?}", r1.time);
-        println!("Optimized Sieve time: {:?}", r2.time);
-        println!("");
+        for cache_result in &results_cache_thread[index] {
+            println!(
+                "Limit: {}, Cache Usage Factor: {}, Time: {:?}",
+                cache_result.limit, cache_result.cache_usage_factor, cache_result.time
+            );
+            same_primes = same_primes && naive.primes == cache_result.primes;
+        }
+        println!("All implementations match: {}\n", same_primes);
     }
-    
 }
