@@ -2,6 +2,7 @@
 
 from prime_sqrt import prime, naive_prime_until
 from Sieve_Prime_List import primes_until_n
+import timeit
 import time
 class SieveListTestCase:
     def __init__(self, n, start, exp):
