@@ -93,7 +93,8 @@ fn run_increasing_values(
         10_000_000,
         100_000_000,
         1_000_000_000,
-        10_000_000_000
+        10_000_000_000,
+        100_000_000_000
     ];
     for limit in values {
         let start = std::time::Instant::now();
@@ -136,10 +137,17 @@ fn main() {
     let env_var_values: HashMap<String, usize> = ENV_VAR_NAMES
         .iter()
         .map(|&var_name| {
+            // Hybrid CPUs list one value per core type (e.g. "32,48"); use the smallest.
             let value = env::var(var_name)
                 .expect(&format!("{} must be set", var_name))
-                .parse::<usize>()
-                .expect(&format!("{} must be a valid usize", var_name));
+                .split(',')
+                .map(|part| {
+                    part.trim()
+                        .parse::<usize>()
+                        .expect(&format!("{} must be a comma separated list of usize", var_name))
+                })
+                .min()
+                .expect(&format!("{} must not be empty", var_name));
             (var_name.to_string(), value)
         })
         .collect();
