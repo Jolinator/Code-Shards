@@ -10,11 +10,7 @@ pub(super) fn clear_bit(bits: &mut [u64], n: usize) {
     bits[n / 64] &= !mask;
 }
 
-pub(super) fn get_primes_from_bits(
-    start_odd: usize,
-    limit: usize,
-    nums: &[u64],
-) -> Vec<usize> {
+pub(super) fn get_primes_from_bits(start_odd: usize, limit: usize, nums: &[u64]) -> Vec<usize> {
     let mut primes = Vec::new();
     let bit_limit = limit.saturating_sub(start_odd).div_ceil(2);
     let u64_limit = bit_limit.div_ceil(64);

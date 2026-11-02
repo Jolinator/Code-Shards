@@ -1,5 +1,6 @@
 use super::optimized::{clear_bit, eratosthenes_algo_optimized, get_primes_from_bits};
 use std::cmp::min;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
@@ -50,7 +51,7 @@ pub(super) fn mark_composites(
 ) {
     let mut counter: usize;
     // 128 because each word is 64 bits and each bit is an odd number so 1 bit for every 2 integers
-    let word_offset = (start_odd-1) / 128; 
+    let word_offset = (start_odd - 1) / 128;
     init_with_early_pattern(nums, pattern, word_offset);
     for &p in &primes[4..] {
         counter = (start_odd / p) * p;
@@ -99,7 +100,7 @@ fn run_worker(job: SieveJob, next_segment: &AtomicUsize, nums: &mut [u64]) -> Ve
 
 fn run_workers(job: SieveJob, buffers: &mut [Vec<u64>]) -> Vec<SegmentResult> {
     let next_segment = AtomicUsize::new(0);
-    
+
     thread::scope(|scope| {
         let mut handles = Vec::new();
         for nums in buffers.iter_mut() {
@@ -127,32 +128,40 @@ pub fn eratosthenes_cache_thread(
     cache_bytes: usize,
     logical_threads: usize,
     cache_usage_factor: f64,
+    store_prime_segments_path: &PathBuf,
 ) -> Vec<usize> {
-    if limit < 62 { //sqroot of this number must have at least 4 primes (49). 62 is for safety.
+    if limit < 10000 {
+        //sqroot of this number must have at least 4 primes (49). 62 is for safety.
         return eratosthenes_algo_optimized(limit + 1);
     }
 
     let limit_sqrt = (limit as f64).sqrt() as usize;
-    let limit_sqrt = if limit_sqrt%2==0{
-        limit_sqrt+1
-    }
-    else {
+    let limit_sqrt = if limit_sqrt % 2 == 0 {
+        limit_sqrt + 1
+    } else {
         limit_sqrt
     };
 
     //compute primes until sqroot
-    let primes = eratosthenes_cache_thread(limit_sqrt + 1, cache_bytes, logical_threads, cache_usage_factor);
+    let primes = eratosthenes_cache_thread(
+        limit_sqrt + 1,
+        cache_bytes,
+        logical_threads,
+        cache_usage_factor,
+        store_prime_segments_path,
+    );
+
     let first_odd = limit_sqrt + 2;
     if first_odd > limit {
         return primes;
     }
     let first_aligned = (first_odd - 1) / 128 * 128 + 1;
-    
+
     //compute splits between workloads
     let byte_split = (cache_bytes as f64 * cache_usage_factor) as usize;
     let byte_split = (byte_split / 8 * 8).max(8); //round down to lower mult of 8 to fit in word
     let odd_count = (limit - first_aligned) / 2 + 1;
-    let bit_split = byte_split*8;
+    let bit_split = byte_split * 8;
     let workloads = odd_count.div_ceil(bit_split);
     if workloads == 0 {
         return primes;
