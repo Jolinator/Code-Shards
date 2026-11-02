@@ -68,7 +68,7 @@ def find_best_params_sieve_list():
     return cases
 
 #Sieve list is slow because of pop() and moving indices
-#A real sieve would use a byte array insted of a dynamic list
+#A real sieve would use a byte array insted of a dynamic list (the rust one I made is more than 100x faster)
 #However, it does not use any division,multiplication or modulo operations! 
 #(Except in a few rarely ocurring small scale operations)
 def naive_prime_vs_list_sieve():

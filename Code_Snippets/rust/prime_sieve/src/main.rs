@@ -12,6 +12,7 @@ use std::{
 
 use sieves::{
     cache_thread::eratosthenes_cache_thread,
+    cache_thread_count::eratosthenes_cache_thread_count,
     naive::eratosthenes_naive,
     optimized::eratosthenes_algo_optimized,
 };
@@ -56,18 +57,68 @@ fn test_compare(cache_bytes: usize, thread_count: &[usize]) -> String {
     report
 }
 
-fn save_report(report: &str) -> PathBuf {
+fn save_report(report: &str, differentiator: &str) -> PathBuf {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system clock is before 1970")
-        .as_secs();
+        .as_nanos();
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("results");
     fs::create_dir_all(&dir).expect("could not create results directory");
-    let path = dir.join(format!("result_test_{timestamp}.txt"));
+    let path = dir.join(format!("result_test_{differentiator}_{timestamp}.txt"));
     fs::write(&path, report).expect("could not write results file");
     path
 }
+
+fn run_increasing_values(
+    cache_bytes: usize,
+    thread_count: usize,
+    cache_usage_factor: f64,
+    store: bool
+) -> String {
+    let mut report = String::new();
+    let values = [
+        100,
+        1_000,
+        10_000,
+        100_000,
+        1_000_000,
+        10_000_000,
+        100_000_000,
+        1_000_000_000,
+        10_000_000_000,
+        100_000_000_000,
+    ];
+    for limit in values {
+        let start = std::time::Instant::now();
+        let count = if store {
+            eratosthenes_cache_thread(limit, cache_bytes, thread_count, cache_usage_factor).len()
+        } else {
+            eratosthenes_cache_thread_count(limit, cache_bytes, thread_count, cache_usage_factor)
+        };
+        let elapsed = start.elapsed();
+
+        writeln!(
+            report,
+            "Limit: {limit}, Prime count: {count}, Cache bytes: {cache_bytes}, \
+             Cache usage factor: {cache_usage_factor}, Thread count: {thread_count}, \
+             Time: {elapsed:?}"
+        )
+        .unwrap();
+    }
+    report
+}
+
+fn usage() -> ! {
+    eprintln!("Usage: prime_sieve <compare | scaling> [--store]");
+    eprintln!("  --store  (scaling only) keep the primes instead of only counting them");
+    std::process::exit(1);
+}
+
 fn main() {
+    let args: Vec<String> = env::args().skip(1).collect();
+    let mode = args.first().cloned().unwrap_or_else(|| usage());
+    let store = args.iter().skip(1).any(|a| a == "--store");
+    //In my computer the fastest version of this algo found 4118054813 (up to 10^11) primes in 15.24 seconds
     dotenvy::dotenv().ok();
 
     let env_var_values: HashMap<String, usize> = ENV_VAR_NAMES
@@ -90,9 +141,18 @@ fn main() {
 
     let thread_count = &[1, 2, logical_threads/2, logical_threads];
 
-
-    let report = test_compare(cache_bytes, thread_count);
-    print!("{report}");
-    let path = save_report(&report);
-    println!("Results saved to {}", path.display());
+    match mode.as_str() {
+        "compare" => {
+            let report = test_compare(cache_bytes, thread_count);
+            let path = save_report(&report, "test_compare");
+            println!("Results saved to {}", path.display());
+        }
+        "scaling" => {
+            let report = run_increasing_values(cache_bytes, logical_threads, 0.5, store);
+            let name = if store { "scaling_store" } else { "scaling_count" };
+            let path = save_report(&report, name);
+            println!("Results saved to {}", path.display());
+        }
+        _ => usage(),
+    }
 }

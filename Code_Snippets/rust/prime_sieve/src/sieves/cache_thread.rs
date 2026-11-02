@@ -3,10 +3,10 @@ use std::cmp::min;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
-const EARLY_PERIOD: usize = 105; // words: 3 * 5 * 7
+pub(super) const EARLY_PERIOD: usize = 105; // words: 3 * 5 * 7
 
 //creates a mask that sieves primes 3 5 7 instantly
-fn build_early_pattern() -> [u64; EARLY_PERIOD] {
+pub(super) fn build_early_pattern() -> [u64; EARLY_PERIOD] {
     let mut pattern = [!0u64; EARLY_PERIOD];
     for k in 0..EARLY_PERIOD * 64 {
         let n = 2 * k + 1;
@@ -37,6 +37,17 @@ fn sieve_with_primes(
     pattern: &[u64; EARLY_PERIOD],
     nums: &mut [u64],
 ) -> Vec<usize> {
+    mark_composites(start_odd, stop_odd, primes, pattern, nums);
+    get_primes_from_bits(start_odd, stop_odd, nums)
+}
+
+pub(super) fn mark_composites(
+    start_odd: usize,
+    stop_odd: usize,
+    primes: &[usize],
+    pattern: &[u64; EARLY_PERIOD],
+    nums: &mut [u64],
+) {
     let mut counter: usize;
     // 128 because each word is 64 bits and each bit is an odd number so 1 bit for every 2 integers
     let word_offset = (start_odd-1) / 128; 
@@ -53,17 +64,15 @@ fn sieve_with_primes(
             counter += p * 2;
         }
     }
-
-    get_primes_from_bits(start_odd, stop_odd, nums)
 }
 
 #[derive(Clone, Copy)]
-struct SieveJob<'a> {
-    primes: &'a [usize],
-    start_odds: &'a [usize],
-    stop_odds: &'a [usize],
-    pattern: &'a [u64; EARLY_PERIOD],
-    first_odd: usize,
+pub(super) struct SieveJob<'a> {
+    pub(super) primes: &'a [usize],
+    pub(super) start_odds: &'a [usize],
+    pub(super) stop_odds: &'a [usize],
+    pub(super) pattern: &'a [u64; EARLY_PERIOD],
+    pub(super) first_odd: usize,
 }
 
 type SegmentResult = (usize, Vec<usize>);
