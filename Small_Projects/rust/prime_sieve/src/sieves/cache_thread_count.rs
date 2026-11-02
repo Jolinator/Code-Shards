@@ -1,5 +1,6 @@
 use super::cache_thread::{SieveJob, build_early_pattern, mark_composites};
 use super::optimized::eratosthenes_algo_optimized;
+use super::cache_thread::eratosthenes_cache_thread;
 use std::cmp::min;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
@@ -81,7 +82,7 @@ pub fn eratosthenes_cache_thread_count(
         limit_sqrt
     };
 
-    let primes = eratosthenes_algo_optimized(limit_sqrt + 1);
+    let primes = eratosthenes_cache_thread(limit_sqrt + 1, cache_bytes, logical_threads, cache_usage_factor);
     let first_odd = limit_sqrt + 2;
     if first_odd > limit {
         return primes.len();

@@ -141,7 +141,7 @@ pub fn eratosthenes_cache_thread(
     };
 
     //compute primes until sqroot
-    let primes = eratosthenes_algo_optimized(limit_sqrt + 1);
+    let primes = eratosthenes_cache_thread(limit_sqrt + 1, cache_bytes, logical_threads, cache_usage_factor);
     let first_odd = limit_sqrt + 2;
     if first_odd > limit {
         return primes;
