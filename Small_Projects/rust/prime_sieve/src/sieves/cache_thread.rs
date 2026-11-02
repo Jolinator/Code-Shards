@@ -1,6 +1,5 @@
 use super::optimized::{clear_bit, eratosthenes_algo_optimized, get_primes_from_bits};
 use std::cmp::min;
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
@@ -128,7 +127,6 @@ pub fn eratosthenes_cache_thread(
     cache_bytes: usize,
     logical_threads: usize,
     cache_usage_factor: f64,
-    store_prime_segments_path: &PathBuf,
 ) -> Vec<usize> {
     if limit < 10000 {
         //sqroot of this number must have at least 4 primes (49). 62 is for safety.
@@ -148,13 +146,9 @@ pub fn eratosthenes_cache_thread(
         cache_bytes,
         logical_threads,
         cache_usage_factor,
-        store_prime_segments_path,
     );
 
     let first_odd = limit_sqrt + 2;
-    if first_odd > limit {
-        return primes;
-    }
     let first_aligned = (first_odd - 1) / 128 * 128 + 1;
 
     //compute splits between workloads
@@ -163,9 +157,6 @@ pub fn eratosthenes_cache_thread(
     let odd_count = (limit - first_aligned) / 2 + 1;
     let bit_split = byte_split * 8;
     let workloads = odd_count.div_ceil(bit_split);
-    if workloads == 0 {
-        return primes;
-    }
 
     let thread_count = min(logical_threads, workloads);
 

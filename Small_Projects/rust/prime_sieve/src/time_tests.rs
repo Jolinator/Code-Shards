@@ -84,17 +84,13 @@ pub fn time_thread_cache(
     results
 }
 
-pub fn test_compare(
-    cache_bytes: usize,
-    logical_threads: usize,
-    primes_dir: Option<&Path>,
-) -> String {
+pub fn test_compare(cache_bytes: usize, logical_threads: usize) -> String {
     let thread_count = &[1, logical_threads / 2, logical_threads];
     let results_naive = time_function(eratosthenes_naive);
     let results_optimized = time_function(eratosthenes_algo_optimized);
     let results_cache_thread = time_thread_cache(
         |limit, cache_bytes, threads, factor| {
-            eratosthenes_cache_thread(limit, cache_bytes, threads, factor, &PathBuf::new())
+            eratosthenes_cache_thread(limit, cache_bytes, threads, factor)
         },
         cache_bytes,
         thread_count,
@@ -102,9 +98,6 @@ pub fn test_compare(
 
     let mut report = String::new();
     for (index, (naive, optimized)) in results_naive.iter().zip(&results_optimized).enumerate() {
-        if let Some(dir) = primes_dir {
-            dump_primes(naive.primes.clone(), dir);
-        }
         let mut same_primes = naive.primes == optimized.primes;
         writeln!(
             report,
@@ -186,13 +179,8 @@ pub fn run_increasing_values(
     ];
     for limit in values {
         let start = std::time::Instant::now();
-        let count = eratosthenes_cache_thread_count(
-            limit,
-            cache_bytes,
-            thread_count,
-            cache_usage_factor,
-            &PathBuf::new(),
-        );
+        let count =
+            eratosthenes_cache_thread_count(limit, cache_bytes, thread_count, cache_usage_factor);
         let elapsed = start.elapsed();
 
         writeln!(
@@ -246,17 +234,10 @@ pub fn run_find_all(
     cache_bytes: usize,
     thread_count: usize,
     cache_usage_factor: f64,
-    primes_dir: Option<&Path>,
+    primes_dir: &Path,
 ) -> (String, Option<PathBuf>) {
     let start = std::time::Instant::now();
-    let segments_dir = primes_dir.map(Path::to_path_buf).unwrap_or_default();
-    let primes = eratosthenes_cache_thread(
-        limit,
-        cache_bytes,
-        thread_count,
-        cache_usage_factor,
-        &segments_dir,
-    );
+    let primes = eratosthenes_cache_thread(limit, cache_bytes, thread_count, cache_usage_factor);
     let elapsed = start.elapsed();
 
     let report = format!(
@@ -266,7 +247,7 @@ pub fn run_find_all(
         primes.len()
     );
 
-    let primes_path = primes_dir.and_then(|dir| dump_primes(primes, dir));
+    let primes_path = dump_primes(primes, primes_dir);
     (report, primes_path)
 }
 
@@ -275,17 +256,10 @@ pub fn run_count(
     cache_bytes: usize,
     thread_count: usize,
     cache_usage_factor: f64,
-    primes_dir: Option<&Path>,
 ) -> String {
-    let prime_store = primes_dir.map(Path::to_path_buf).unwrap_or_default();
     let start = std::time::Instant::now();
-    let count = eratosthenes_cache_thread_count(
-        limit,
-        cache_bytes,
-        thread_count,
-        cache_usage_factor,
-        &prime_store,
-    );
+    let count =
+        eratosthenes_cache_thread_count(limit, cache_bytes, thread_count, cache_usage_factor);
     let elapsed = start.elapsed();
 
     format!(

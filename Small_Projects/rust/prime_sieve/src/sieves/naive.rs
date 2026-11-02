@@ -1,5 +1,3 @@
-use std::vec;
-
 pub fn eratosthenes_naive(limit: usize) -> Vec<usize> {
     let mut primes = Vec::new();
     let mut nums = vec![true; limit];

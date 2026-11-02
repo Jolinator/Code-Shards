@@ -14,7 +14,9 @@ fn usage() -> ! {
     eprintln!(
         "Usage: prime_sieve [compare | scaling (default) | count <n> | findall <n>] [--cargo]"
     );
-    eprintln!("  compare and findall store the primes; scaling and count only count them");
+    eprintln!(
+        "  findall stores the primes; compare and scaling only compare and time, count only counts them"
+    );
     eprintln!(
         "  --cargo  save results in the project's results folder instead of beside the executable"
     );
@@ -35,7 +37,7 @@ fn main() {
             args.get(1)
                 .and_then(|value| value.parse::<usize>().ok())
                 .unwrap_or_else(|| {
-                    eprintln!("count requires a non-negative integer limit");
+                    eprintln!("{mode} requires a non-negative integer limit");
                     usage()
                 }),
         )
@@ -65,24 +67,18 @@ fn main() {
         })
         .collect();
 
-    let cache_bytes = *env_var_values
-        .get("CPU_L1D_CACHE_SIZE_PER_INSTANCE_KB")
-        .unwrap_or(&32)
-        * 1024;
+    let cache_bytes = env_var_values["CPU_L1D_CACHE_SIZE_PER_INSTANCE_KB"] * 1024;
 
-    let logical_threads = *env_var_values.get("CPU_LOGICAL_CORES").unwrap_or(&1);
-
+    let logical_threads = env_var_values["CPU_LOGICAL_CORES"];
 
     let optimal_thread_count = logical_threads;
     let optimal_cache_factor = 0.5;
 
     let results_dir = create_results_dir(use_cargo_path);
-    let primes_dir = (mode == "compare" || mode == "findall" || mode == "count")
-        .then(|| create_primes_dir(&results_dir));
 
     match mode.as_str() {
         "compare" => {
-            let report = test_compare(cache_bytes, logical_threads, primes_dir.as_deref());
+            let report = test_compare(cache_bytes, logical_threads);
             let path = save_report(&report, "test_compare", &results_dir);
             println!("Results saved to {}", path.display());
         }
@@ -99,19 +95,19 @@ fn main() {
                 cache_bytes,
                 optimal_thread_count,
                 optimal_cache_factor,
-                primes_dir.as_deref(),
             );
             let path = save_report(&report, &format!("count_{limit}"), &results_dir);
             println!("Results saved to {}", path.display());
         }
         "findall" => {
             let limit = count_limit.expect("count limit was validated");
+            let primes_dir = create_primes_dir(&results_dir);
             let (report, primes_path) = run_find_all(
                 limit,
                 cache_bytes,
                 optimal_thread_count,
                 optimal_cache_factor,
-                primes_dir.as_deref(),
+                &primes_dir,
             );
             let path = save_report(&report, &format!("findall_{limit}"), &results_dir);
             println!("Results saved to {}", path.display());

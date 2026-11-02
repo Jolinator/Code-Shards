@@ -1,5 +1,3 @@
-use std::vec;
-
 fn is_set(bits: &[u64], n: usize) -> bool {
     let mask = 1u64 << (n % 64);
     bits[n / 64] & mask != 0

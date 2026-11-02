@@ -2,7 +2,6 @@ use super::cache_thread::eratosthenes_cache_thread;
 use super::cache_thread::{SieveJob, build_early_pattern, mark_composites};
 use super::optimized::eratosthenes_algo_optimized;
 use std::cmp::min;
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
@@ -71,7 +70,6 @@ pub fn eratosthenes_cache_thread_count(
     cache_bytes: usize,
     logical_threads: usize,
     cache_usage_factor: f64,
-    prime_store: &PathBuf,
 ) -> usize {
     if limit < 10000 {
         return eratosthenes_algo_optimized(limit + 1).len();
@@ -89,12 +87,8 @@ pub fn eratosthenes_cache_thread_count(
         cache_bytes,
         logical_threads,
         cache_usage_factor,
-        prime_store,
     );
     let first_odd = limit_sqrt + 2;
-    if first_odd > limit {
-        return primes.len();
-    }
     let first_aligned = (first_odd - 1) / 128 * 128 + 1;
 
     let byte_split = (cache_bytes as f64 * cache_usage_factor) as usize;
@@ -102,9 +96,6 @@ pub fn eratosthenes_cache_thread_count(
     let odd_count = (limit - first_aligned) / 2 + 1;
     let bit_split = byte_split * 8;
     let workloads = odd_count.div_ceil(bit_split);
-    if workloads == 0 {
-        return primes.len();
-    }
 
     let thread_count = min(logical_threads, workloads);
 
